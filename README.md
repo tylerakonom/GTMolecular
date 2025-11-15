@@ -15,7 +15,7 @@ Sequencing was performed by targeted deep sequencing for two multiple gene panel
 
 1. Download raw reads of a single patient pre/post treatment (Fastq)
 
-*I picked CTDC33 as my sample to work with. This patient had baseline, first response, disease progression at death, and PBMC samples all sequenced with the same targeted gene panel*
+  *I picked CTDC33 as my sample to work with. This patient had baseline, first response, and PBMC samples all sequenced with the same targeted gene panel*
 
 Identify relevant samples/runs in the NCBI Run Selector to download
 
