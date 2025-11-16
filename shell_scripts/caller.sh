@@ -6,8 +6,8 @@
 
 #SBATCH --partition=amilan    # Summit partition
 #SBATCH --qos=normal                 # Summit qos
-#SBATCH --time=001:00:00           # Max wall time in HHH:MM:SS
-#SBATCH --ntasks=4           # Number of tasks per job  
+#SBATCH --time=002:00:00           # Max wall time in HHH:MM:SS
+#SBATCH --ntasks=8           # Number of tasks per job  
 #SBATCH --nodes=1             # Number of nodes per job
 #SBATCH --job-name=caller      # Job submission name
 #SBATCH --output=caller%j.out   # Output file name with Job ID

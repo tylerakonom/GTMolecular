@@ -74,7 +74,7 @@ $ samtools index {filename}_dedup.bam
 
 * Downloaded "known variant" file and index following GATK best practices located on the [Broad Institute's GitHub](https://github.com/gatk-workflows/gatk4-data-processing/blob/master/processing-for-variant-discovery-gatk4.wdl), with the bucket located [here](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0;tab=objects?pli=1&prefix=&forceOnObjectsSortingFiltering=false).
 * Performed BQSR using [this](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/bqsr.sh) script queued in the command line with [this](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/run_bqsr.sh) script. GATK was called twice, the first time to generate a BQSR table, and the second time was to apply the new scores to .bam files.
-* Variant calling (GATK) performed using 
+* Variant calling (GATK) performed using [this script](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/caller.sh) and jobs were queued using [this script](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/run_caller.sh).
 * Annotation (SnpEff)
 * Variant information added from ClinVar and COSMIC
 
