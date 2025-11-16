@@ -25,3 +25,4 @@ ref=/gpfs/alpine1/scratch/$USER/GTM/genome/GCA_000001405.15_GRCh38_full_analysis
 
 # Running gatk
 gatk BaseRecalibrator -R ${ref} -I ${indirectory}/${filename}_dedup.bam -known-sites ${ks} -O ${outdirectory}/${filename}_recal_data.table
+gatk ApplyBQSR -R ${ref} -I ${indirectory}/${filename}_dedup.bam --bqsr-recal-file ${outdirectory}/${filename}_recal_data.table -O ${outdirectory}/${filename}_recal.bam
