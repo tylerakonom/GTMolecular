@@ -17,12 +17,9 @@
 module purge
 
 # load the module needed to run the software container, and set up temporary directories
-module load bwa
-outdirectory=/gpfs/alpine1/scratch/$USER/GTM/aligned
-indirectory=/gpfs/alpine1/scratch/$USER/GTM
-genome=/gpfs/alpine1/scratch/$USER/GTM/genome/GCA_000001405.15_GRCh38_full_analysis_set.fna
-rg=@RG\\tID:${filename}\\tLB:${filename}\\tPL:ILLUMINA\\tSM:${filename}
+module load picard
+outdirectory=/gpfs/alpine1/scratch/$USER/GTM/aligned/sorted
+indirectory=/gpfs/alpine1/scratch/$USER/GTM/aligned
 
-
-# Running bwa
-bwa mem -t 8 -M -R ${rg} ${genome} ${indirectory}/${filename}.fastq > ${outdirectory}/${filename}.sam
+# Running picard
+java -jar $PICARD_JAR SortSam INPUT=CDTC33_1.sam OUTPUT=CDTC33_1_sorted.bam SORT_ORDER=coordinate
