@@ -28,7 +28,7 @@ Sequencing was performed by targeted deep sequencing for two multiple gene panel
 	fastq-dump [Run number]
 
 ### Preprocessing
-*I don't have access to enough personal computing power to perform this analysis, so I initially used Google Colab. I ran into an issue with CPU throughput during alignment, so I moved my processing to [CU Boulder's Research Computing](https://www.colorado.edu/rc/).
+*I don't have access to enough personal computing power to perform this analysis, so I initially used Google Colab and [this notebook](https://github.com/tylerakonom/GTMolecular/blob/main/colab_notebook/GTMolecular.ipynb). I ran into an issue with CPU throughput during alignment, so I moved my processing to [CU Boulder's Research Computing](https://www.colorado.edu/rc/).
 
 1. Deduplicate reads based off of random barcodes on P7 index sites
 * The authors don't elaborate on this step outside of "used in-house scripts". They also don't give much information on what step the publically-available dataset was uploaded at. However, the manuscript says that the reads are paired-end, and there is only a single file per sample. For this reason, I expect that the files are uploaded after filtering and adapater removal.
@@ -61,18 +61,20 @@ $ java -jar $PICARD MarkDuplicates INPUT={filename}_sorted.bam OUTPUT={filename}
 *Deduplication metrics can be found [here](https://github.com/tylerakonom/GTMolecular/tree/main/deduplication_metrics)*
 
 
-
-
-
-
-
-
-
 ### Data analysis
+*Perform variant calling*
 
-1. Perform variant calling
+1. Local realignment and base quality score recalibration (BQSR) (GATK [v4.1.0.0])
 
-* Local realignment and base quality score recalibration (GATK [v4.1.0.0])
+* Generated reference dictionary, fasta index, and bam index for GATK:
+
+$ java -jar $PICARD CreateSequenceDictionary R=GCA_000001405.15_GRCh38_full_analysis_set.fna O=GCA_000001405.15_GRCh38_full_analysis_set.fna.dict
+$ samtools faidx GCA_000001405.15_GRCh38_full_analysis_set.fna
+$ samtools index {filename}_dedup.bam
+
+* Downloaded "known variant" file and index following GATK best practices located on the [Broad Institute's GitHub](https://github.com/gatk-workflows/gatk4-data-processing/blob/master/processing-for-variant-discovery-gatk4.wdl), with the bucket located [here](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0;tab=objects?pli=1&prefix=&forceOnObjectsSortingFiltering=false).
+* Performed BQSR using [this]():
+
 * Generate pileup files with SAMttools (mpileup)
 * Variant calling (Varscan12)
 * Annotation (SnpEff)
