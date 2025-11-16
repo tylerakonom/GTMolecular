@@ -41,7 +41,7 @@ Sequencing was performed by targeted deep sequencing for two multiple gene panel
 
 $module load picard
 
-* Performed read sorting with:
+* Performed read sorting on the command line with:
 
 $java -jar $PICARD SortSam INPUT={filename}.sam OUTPUT={filename}_sorted.bam SORT_ORDER=coordinate
 
