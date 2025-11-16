@@ -11,33 +11,48 @@ Sequencing was performed by targeted deep sequencing for two multiple gene panel
 ## Create an analysis plan
 *For this kind of analysis, I plan to preprocess reads the same way that researchers performed their preprocessing.*
 
-### Data preprocessing
+### Data retrieval
 
 1. Download raw reads of a single patient pre/post treatment (Fastq)
 
-  *I picked CTDC33 as my sample to work with. This patient had baseline, first response, and PBMC samples all sequenced with the same targeted gene panel*
+*I picked CTDC33 as my sample to work with. This patient had baseline, first response, and PBMC samples all sequenced with the same targeted gene panel*
 
-Identify relevant samples/runs in the NCBI Run Selector to download
-
-Patient CTDC33 has four relevant samples:
+2. Identify relevant samples/runs in the NCBI Run Selector to download. Patient CTDC33 has four relevant samples:
 
 * CTDC33 (Baseline) (SRR13973737)
 * CTDC33-2 (1st response) (SRR13973738)
-* CDTC33-3 (PBMCs) (SRR13973947)
+* CTDC33-3 (PBMCs) (SRR13973947)
 
-Downloaded to local machine using [SRA toolkit](https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit) by navigating to local directory and running:
+3. Downloaded to local machine using [SRA toolkit](https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit) by navigating to local directory and running:
 
 	fastq-dump [Run number]
 
-2. Preprocess/prepare data
+### Preprocessing
     
-* Map (Burrows-Wheeler Aligner [v0.7.10] ["mem" algorithm]) to appropriate reference genome (hg19)
-* Convert to BAM files and sorted (SAMtools [v1.1])
+1. Deduplicate reads based off of random barcodes on P7 index sites
+* The authors don't elaborate on this step outside of "used in-house scripts". They also don't give much information on what step the publically-available dataset was uploaded at. However, the manuscript says that the reads are paired-end, and there is only a single file per sample. For this reason, I expect that the files are uploaded after filtering and adapater removal.
+2. Map (Burrows-Wheeler Aligner ["mem" algorithm] [v0.7.17]) to appropriate reference genome (GRCh38)
+* Instead of building indexes from scratch using bwa, I downloaded the necessary index file from NCBI directly.
+* -M tag required for GATK variant calling
+*This step proved to be too much to run on Google Colab. The aligner that the authors used is CPU limited, and Google Colab only allows the use of a single CPU. Processing 3 samples would've taken ~72 hours, so I downloaded the fastq files to my local machine and uploaded them to RC at CU Boulder. I no longer have access to software installation, so I performed the next steps using the CURC-provided modules. Documentation for CURC can be found [here](https://curc.readthedocs.io/en/latest/index.html).*
+* Adapted previously used scripts to submit alignment jobs to CURC using 24 cores on 1 thread.
+3. Convert to BAM files and sorted (Picard [v2.27.5])
+* Run using a compile node and command line on the alpine cluster at CU Boulder. Loaded picard module using:
+
+$module load picard
+
+* Performed read sorting with:
+
+$java -jar $PICARD SortSam INPUT={filename}.sam OUTPUT={filename}_sorted.bam SORT_ORDER=coordinate
+
+* Generated alignment metrics with samtools (v1.16.1) on the command line using:
+
+
 
 
 ### Data analysis
 
-3. Perform variant calling
+1. Perform variant calling
 
 * Local realignment and base quality score recalibration (GATK [v4.1.0.0])
 * Generate pileup files with SAMttools (mpileup)
@@ -45,7 +60,7 @@ Downloaded to local machine using [SRA toolkit](https://github.com/ncbi/sra-tool
 * Annotation (SnpEff)
 * Variant information added from ClinVar and COSMIC
 
-4. Analysis parameters
+2. Determine analysis parameters
 
 * Filter out variants with less than 10% variant allele frequency (VAF) or less than 10 variant reads
     
