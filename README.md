@@ -103,13 +103,35 @@ $ samtools index {filename}_dedup.bam
 $ snpEff download -v GRCh38.mane.1.2.refseq
 $ snpEff -v GRCh38.mane.1.2.refseq {filename}_filtered_snps.vcf > {filename}_filtered_snps.ann.vcf
 
+* All vcf files generated are located [here](https://github.com/tylerakonom/GTMolecular/blob/main/variants/).
 * Data were visualized using IGV.
 
 
-## Results, conclusions, and future directions
+## Results
 
 ### Pipeline troubleshooting
+
 Since I only have limited access to previous research computing resources, I had to adapt my approach from my previous experience with CURC to Google Colab. Once I was forced to pivot back to CURC due to throughput issues I was forced to use the tools that are provided instead of the exact matches to the tools the author's used in the manuscript. This means that, even though I arrived at visualized results, I expect them to deviate from the original author's. Another consequence of having to pivot multiple times is that I ran out of time to have the final step of sample 3 run completely. I have a finalized .bam file for sample CTDC33_3, but was unable to generate a final SNP or INDEL file.
 
 ### Sample discrepancies
-The samples uploaded to NCBI's Bioproject repository were not named in a consistent way, and it seems that the authors had a "raw" sample ID that differed greatly from the sample IDs that they used in their bioinformatics pipeline (supplementary table 2). I ended up downloading samples named CTC333, CTC333-2, and PBMC_CTC333 expecting that they were samples CTDC33 (baseline), CTDC33-2 (1st response), and CTDC33-3 (PBMCs) analyzed with "Version 3" of their NGS panel. After processing these data and visualizing them in IGV I found that NCBI sample CTC333 had very little coverage (confirmed by alignment metrics), leading me to the conclusion that it was either a sample the authors weren't able to include in their final manuscript or something else entirely. Furthermore, the alignment metrics for each of the three samples don't match the supplementary table provided in the manuscript. 
+
+The samples uploaded to NCBI's Bioproject repository were not named in a consistent way, and it seems that the authors had a "raw" sample ID that differed greatly from the sample IDs that they used in their bioinformatics pipeline (supplementary table 2). I ended up downloading samples named CTC333, CTC333-2, and PBMC_CTC333 expecting that they were samples CTDC33 (baseline), CTDC33-2 (1st response), and CTDC33-3 (PBMCs) analyzed with "Version 3" of their NGS panel. After processing these data and visualizing them in IGV I found that NCBI sample CTC333 had very little coverage (confirmed by alignment metrics and [visualized in IGV](https://github.com/tylerakonom/GTMolecular/blob/main/igv_snapshots/1v2IGVSnapshot.png)), leading me to the conclusion that it was either a sample the authors weren't able to include in their final manuscript or something else entirely. Furthermore, the alignment metrics for each of the three samples don't match the supplementary table provided in the manuscript.
+
+Unfortunately, these challenges result in a highly limited context in which we can draw conclusions. We can't determine whether or not this sample was from ctDNA and representative of colorectal cancer cells, or if this sample was from the PBMCs and representative of the patient's genome.
+
+### Results from CTDC33_2 for *KRAS*
+
+In sample CTDC33_2 (NCBI Bioproject sample CTC333-2), [two SNPs were identified](https://github.com/tylerakonom/GTMolecular/blob/main/igv_snapshots/kras.png) in protein coding (exon) sequences of the gene *KRAS* through variant calling analysis.
+
+Depending on the context with which we wanted to present these results, I can imagine a couple of different ways to market them:
+
+* Advertising graphic for NGS customized pipeline services/library prep kit: I invision a simplified diagram of DNA with two obvious red regions with a tag line like "Through the use of GT Molecular's customized bioinformatics pipeline/GT Molecular's NGS library prep kit we were able to perform a deep sequencing of 16 genes sensitive enough to detect single nucleotide polymorphisms in *KRAS*, a gene highly relevant to the study of colorectal cancer" underneath it. Another option would be an annotated and worked-up diagram (similar to the [IGV snapshot](https://github.com/tylerakonom/GTMolecular/blob/main/igv_snapshots/kras.png) in a more digestible format) with various comparative metrics in a pared-down table underneath.
+
+* Comparison between this analysis and a GT Molecular customized bioinformatics pipeline: This analysis was performed using a very basic analysis method and outdated tools to match the author's pipeline as closely as possible within my time constraints. In my experience, academic researchers don't have the luxury to pursue the most cutting edge analysis methods due to a lack of time, budget, or expertise. This analysis could be performed again using an updated pipeline using the most relevant and powerful tools, expecting an increase in sensitivity. These results would then be contrasted to highlight the benefits of using a GT Molecular service.
+
+## Future directions
+
+* Step-wise improvements: This process was performed using a basic variant calling workflow, and has tons of room to be improved. There are newer tools, more specific or relevant databases, and settings/thresholds that would require more research and time than I have to improve on this analysis drastically.
+* Snakemake/Nextflow: The first time an anlaysis is performed is always the hardest, and follow-up workflows can be heavily simplified or automated entirely. The most comprehensive solution I can think of to remedy this is to create a Snakemake or Nextflow script with a basic GUI and user manual. This would make this analysis much more accessible and theoretically marketable.
+
+Thank you so much for your time reading through this analysis, and I look forward to any feedback or critique you have for my processes!
