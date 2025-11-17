@@ -11,6 +11,21 @@ Sequencing was performed by targeted deep sequencing for two multiple gene panel
 ## Create an analysis plan
 *For this kind of analysis, I plan to preprocess reads the same way that researchers performed their preprocessing.*
 
+### Data preparation and analysis
+
+The steps I took to generate visualized results were as follows:
+1. Retrieve raw reads
+* Samples should be received in the form of fastq files, representing millions of raw reads from the sequencer. Without processing, there is no way to contextualize these results.
+2. Preprocess samples
+* Remove adapter sequences: adapter sequences are attached to each DNA fragment during NGS library preparation. These sequencers are not representative of the host's genome, and can cause issues when attempting to align reads to the genome.
+* Aligning: cDNA reads are compared to a reference genome, then assigned a place in the genome that they likely came from.
+3. Base quality score recalibration
+* During NGS, bases are assigned a quality score based off of the probability that the base call is correct and are regulary higher than they should be.
+* Using machine learning, a reference genome, and a database of known variants we recalibrate these quality scores more accurately assess quality scores.
+4. Perform variant calling
+* GATK and a reference genome are used to identify variations in our mapped reads compared to a refernce genome.
+* Variations are filtered out by setting accepted QC thresholds, generating a final vcf with variants of interest.
+
 ### Data retrieval
 
 1. Download raw reads of a single patient pre/post treatment (Fastq)
@@ -23,23 +38,28 @@ Sequencing was performed by targeted deep sequencing for two multiple gene panel
 * CTDC33-2 (1st response) (SRR13973738)
 * CTDC33-3 (PBMCs) (SRR13973947)
 
-3. Downloaded to local machine using [SRA toolkit](https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit) by navigating to local directory and running:
+3. Created a conda environment in Google Colab and installed [SRA toolkit](https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit), then downloaded files using:
 
-	fastq-dump [Run number]
+!fastq-dump [Run number]
 
 ### Preprocessing
 *I don't have access to enough personal computing power to perform this analysis, so I initially used Google Colab and [this notebook](https://github.com/tylerakonom/GTMolecular/blob/main/colab_notebook/GTMolecular.ipynb). I ran into an issue with CPU throughput during alignment, so I moved my processing to [CU Boulder's Research Computing](https://www.colorado.edu/rc/).
 
 1. Deduplicate reads based off of random barcodes on P7 index sites
-* The authors don't elaborate on this step outside of "used in-house scripts". They also don't give much information on what step the publically-available dataset was uploaded at. However, the manuscript says that the reads are paired-end, and there is only a single file per sample. For this reason, I expect that the files are uploaded after filtering and adapater removal.
+* The authors don't elaborate on this step outside of "used in-house scripts", but I performed deduplication as part of a post-alignment step. They also don't give much information on what step the publically-available dataset was uploaded at. However, the manuscript says that the reads are paired-end, and there is only a single file per sample. For this reason, I expect that the files are uploaded after filtering and adapater removal.
 
-2. Map (Burrows-Wheeler Aligner ["mem" algorithm] [v0.7.17]) to appropriate reference genome (GRCh38)
-* Instead of building indexes from scratch using bwa, I downloaded the necessary index file from NCBI directly.
+2. Map using Burrows-Wheeler Aligner ("mem" algorithm) (v0.7.17) to appropriate reference genome (GRCh38).
+* Instead of building indexes from scratch using bwa, I downloaded the necessary index file from NCBI directly using:
+
+$ wget -q https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GRCh38_major_release_seqs_for_alignment_pipelines/GCA_000001405.15_GRCh38_full_analysis_set.fna.bwa_index.tar.gz
+$ gunzip -q GCA_000001405.15_GRCh38_full_analysis_set.fna.bwa_index.tar.gz
+$ tar -xvf GCA_000001405.15_GRCh38_full_analysis_set.fna.bwa_index.tar
+
 * -M tag required for GATK variant calling
-*This step proved to be too much to run on Google Colab. The aligner that the authors used is CPU limited, and Google Colab only allows the use of a single CPU. Processing 3 samples would've taken ~72 hours, so I downloaded the fastq files to my local machine and uploaded them to RC at CU Boulder. I no longer have access to software installation, so I performed the next steps using the CURC-provided modules. Documentation for CURC can be found [here](https://curc.readthedocs.io/en/latest/index.html).*
+*This step proved to be too much to run on Google Colab. The aligner that the authors used is CPU limited and Google Colab only allows the use of a single CPU. Processing 3 samples would've taken ~72 hours, so I downloaded the fastq files to my local machine and uploaded them to RC at CU Boulder. I no longer have access to software installation, so I performed the next steps using the CURC-provided modules. Documentation for CURC can be found [here](https://curc.readthedocs.io/en/latest/index.html).*
 * Adapted previously used scripts to submit alignment jobs to CURC using 24 cores on 1 thread. [Alignment script](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/alignReads.sh) was uploaded to scratch space, and jobs were queued using [this script](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/run_alignReads.sh) on the command line.
 
-3. Convert to BAM files and sorted (Picard [v2.27.5])
+3. Convert to BAM files and sorted (Picard) (v2.27.5)
 * Run using a compile node and command line on the alpine cluster at CU Boulder. Loaded picard module using:
 
 $module load picard
@@ -64,7 +84,7 @@ $ java -jar $PICARD MarkDuplicates INPUT={filename}_sorted.bam OUTPUT={filename}
 ### Data analysis
 *Perform variant calling*
 
-1. Local realignment and base quality score recalibration (BQSR) (GATK [v4.1.0.0])
+1. Local realignment and base quality score recalibration (BQSR) (GATK) (v4.1.0.0)
 
 * Generated reference dictionary, fasta index, and bam index for GATK:
 
@@ -72,15 +92,24 @@ $ java -jar $PICARD CreateSequenceDictionary R=GCA_000001405.15_GRCh38_full_anal
 $ samtools faidx GCA_000001405.15_GRCh38_full_analysis_set.fna
 $ samtools index {filename}_dedup.bam
 
-* Downloaded "known variant" file and index following GATK best practices located on the [Broad Institute's GitHub](https://github.com/gatk-workflows/gatk4-data-processing/blob/master/processing-for-variant-discovery-gatk4.wdl), with the bucket located [here](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0;tab=objects?pli=1&prefix=&forceOnObjectsSortingFiltering=false).
+* Downloaded "known variant" file and index following GATK best practices located on the [Broad Institute's GitHub](https://github.com/gatk-workflows/gatk4-data-processing/blob/master/processing-for-variant-discovery-gatk4.wdl), with the file bucket located [here](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0;tab=objects?pli=1&prefix=&forceOnObjectsSortingFiltering=false).
 * Performed BQSR using [this](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/bqsr.sh) script queued in the command line with [this](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/run_bqsr.sh) script. GATK was called twice, the first time to generate a BQSR table, and the second time was to apply the new scores to .bam files.
-* Variant calling (GATK) performed using [this script](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/caller.sh) and jobs were queued using [this script](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/run_caller.sh).
-* Annotation (SnpEff)
-* Variant information added from ClinVar and COSMIC
 
-2. Determine analysis parameters
+2. Perform variant calling
 
-* Filter out variants with less than 10% variant allele frequency (VAF) or less than 10 variant reads
-    
+* Variant calling (GATK) performed using [this script](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/caller.sh) and jobs were queued using [this script](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/run_caller.sh). GATK was called 5 total times. (1) I generated a .vcf of "raw variants", then (2,3) I selected SNPs and INDELs from this file and separated them into their own files. Finally (4,5) I filtered the variants for various QC metrics to remove false positives.
+* Annotation (SnpEff) to the NCBI GRCh38 refseq database was performed on the command line using:
+
+$ snpEff download -v GRCh38.mane.1.2.refseq
+$ snpEff -v GRCh38.mane.1.2.refseq {filename}_filtered_snps.vcf > {filename}_filtered_snps.ann.vcf
+
+* Data were visualized using IGV.
 
 
+## Results, conclusions, and future directions
+
+### Pipeline troubleshooting
+Since I only have limited access to previous research computing resources, I had to adapt my approach from my previous experience with CURC to Google Colab. Once I was forced to pivot back to CURC due to throughput issues I was forced to use the tools that are provided instead of the exact matches to the tools the author's used in the manuscript. This means that, even though I arrived at visualized results, I expect them to deviate from the original author's. Another consequence of having to pivot multiple times is that I ran out of time to have the final step of sample 3 run completely. I have a finalized .bam file for sample CTDC33_3, but was unable to generate a final SNP or INDEL file.
+
+### Sample discrepancies
+The samples uploaded to NCBI's Bioproject repository were not named in a consistent way, and it seems that the authors had a "raw" sample ID that differed greatly from the sample IDs that they used in their bioinformatics pipeline (supplementary table 2). I ended up downloading samples named CTC333, CTC333-2, and PBMC_CTC333 expecting that they were samples CTDC33 (baseline), CTDC33-2 (1st response), and CTDC33-3 (PBMCs) analyzed with "Version 3" of their NGS panel. After processing these data and visualizing them in IGV I found that NCBI sample CTC333 had very little coverage (confirmed by alignment metrics), leading me to the conclusion that it was either a sample the authors weren't able to include in their final manuscript or something else entirely. Furthermore, the alignment metrics for each of the three samples don't match the supplementary table provided in the manuscript. 
