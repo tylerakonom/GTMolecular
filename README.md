@@ -40,10 +40,10 @@ The steps I took to generate visualized results were as follows:
 
 3. Created a conda environment in Google Colab and installed [SRA toolkit](https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit), then downloaded files using:
 
-$fastq-dump [Run number]
+	$ fastq-dump [Run number]
 
 ### Preprocessing
-*I don't have access to enough personal computing power to perform this analysis, so I initially used Google Colab and [this notebook](https://github.com/tylerakonom/GTMolecular/blob/main/colab_notebook/GTMolecular.ipynb). I ran into an issue with CPU throughput during alignment, so I moved my processing to [CU Boulder's Research Computing](https://www.colorado.edu/rc/).
+*I don't have access to enough personal computing power to perform this analysis, so I initially used Google Colab and [this notebook](https://github.com/tylerakonom/GTMolecular/blob/main/colab_notebook/GTMolecular.ipynb). I ran into an issue with CPU throughput during alignment, so I moved my processing to [CU Boulder's Research Computing](https://www.colorado.edu/rc/).*
 
 1. Deduplicate reads based off of random barcodes on P7 index sites
 * The authors don't elaborate on this step outside of "used in-house scripts", but I performed deduplication as part of a post-alignment step. They also don't give much information on what step the publically-available dataset was uploaded at. However, the manuscript says that the reads are paired-end, and there is only a single file per sample. For this reason, I expect that the files are uploaded after filtering and adapater removal.
@@ -51,11 +51,9 @@ $fastq-dump [Run number]
 2. Map using Burrows-Wheeler Aligner ("mem" algorithm) (v0.7.17) to appropriate reference genome (GRCh38).
 * Instead of building indexes from scratch using bwa, I downloaded the necessary index file from NCBI directly using:
 
-$wget -q https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GRCh38_major_release_seqs_for_alignment_pipelines/GCA_000001405.15_GRCh38_full_analysis_set.fna.bwa_index.tar.gz
-
-$gunzip -q GCA_000001405.15_GRCh38_full_analysis_set.fna.bwa_index.tar.gz
-
-$tar -xvf GCA_000001405.15_GRCh38_full_analysis_set.fna.bwa_index.tar
+	$ wget -q https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GRCh38_major_release_seqs_for_alignment_pipelines/GCA_000001405.15_GRCh38_full_analysis_set.fna.bwa_index.tar.gz
+	$ gunzip -q GCA_000001405.15_GRCh38_full_analysis_set.fna.bwa_index.tar.gz
+	$ tar -xvf GCA_000001405.15_GRCh38_full_analysis_set.fna.bwa_index.tar
 
 * -M tag required for GATK variant calling
 *This step proved to be too much to run on Google Colab. The aligner that the authors used is CPU limited and Google Colab only allows the use of a single CPU. Processing 3 samples would've taken ~72 hours, so I downloaded the fastq files to my local machine and uploaded them to RC at CU Boulder. I no longer have access to software installation, so I performed the next steps using the CURC-provided modules. Documentation for CURC can be found [here](https://curc.readthedocs.io/en/latest/index.html).*
@@ -64,21 +62,21 @@ $tar -xvf GCA_000001405.15_GRCh38_full_analysis_set.fna.bwa_index.tar
 3. Convert to BAM files and sorted (Picard) (v2.27.5)
 * Run using a compile node and command line on the alpine cluster at CU Boulder. Loaded picard module using:
 
-$module load picard
+	$ module load picard
 
 * Performed read sorting on the command line with:
 
-$java -jar $PICARD SortSam INPUT={filename}.sam OUTPUT={filename}_sorted.bam SORT_ORDER=coordinate
+	$ java -jar $PICARD SortSam INPUT={filename}.sam OUTPUT={filename}_sorted.bam SORT_ORDER=coordinate
 
 * Generated alignment metrics with samtools (v1.16.1) on the command line using:
 
-$samtools flagstat {filename}.sam > {filename}_alignment.txt
+	$ samtools flagstat {filename}.sam > {filename}_alignment.txt
 
 *Alignment metrics can be found [here](https://github.com/tylerakonom/GTMolecular/tree/main/alignment_metrics).*
 
 * Perform routine deduplication using picard on the command line using:
 
-$java -jar $PICARD MarkDuplicates INPUT={filename}_sorted.bam OUTPUT={filename}_dedup.bam METRICS_FILE={filename}_dedup_metrics.txt
+	$ java -jar $PICARD MarkDuplicates INPUT={filename}_sorted.bam OUTPUT={filename}_dedup.bam METRICS_FILE={filename}_dedup_metrics.txt
 
 *Deduplication metrics can be found [here](https://github.com/tylerakonom/GTMolecular/tree/main/deduplication_metrics)*
 
@@ -90,11 +88,11 @@ $java -jar $PICARD MarkDuplicates INPUT={filename}_sorted.bam OUTPUT={filename}_
 
 * Generated reference dictionary, fasta index, and bam index for GATK:
 
-$java -jar picard CreateSequenceDictionary R=GCA_000001405.15_GRCh38_full_analysis_set.fna O=GCA_000001405.15_GRCh38_full_analysis_set.fna.dict
+	$ java -jar picard CreateSequenceDictionary R=GCA_000001405.15_GRCh38_full_analysis_set.fna O=GCA_000001405.15_GRCh38_full_analysis_set.fna.dict
 
-$samtools faidx GCA_000001405.15_GRCh38_full_analysis_set.fna
+	$ samtools faidx GCA_000001405.15_GRCh38_full_analysis_set.fna
 
-$samtools index {filename}_dedup.bam
+	$ samtools index {filename}_dedup.bam
 
 * Downloaded "known variant" file and index following GATK best practices located on the [Broad Institute's GitHub](https://github.com/gatk-workflows/gatk4-data-processing/blob/master/processing-for-variant-discovery-gatk4.wdl), with the file bucket located [here](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0;tab=objects?pli=1&prefix=&forceOnObjectsSortingFiltering=false).
 * Performed BQSR using [this](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/bqsr.sh) script queued in the command line with [this](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/run_bqsr.sh) script. GATK was called twice, the first time to generate a BQSR table, and the second time was to apply the new scores to .bam files.
@@ -104,9 +102,9 @@ $samtools index {filename}_dedup.bam
 * Variant calling (GATK) performed using [this script](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/caller.sh) and jobs were queued using [this script](https://github.com/tylerakonom/GTMolecular/blob/main/shell_scripts/run_caller.sh). GATK was called 5 total times. (1) I generated a .vcf of "raw variants", then (2,3) I selected SNPs and INDELs from this file and separated them into their own files. Finally (4,5) I filtered the variants for various QC metrics to remove false positives.
 * Annotation (SnpEff) to the NCBI GRCh38 refseq database was performed on the command line using:
 
-$ snpEff download -v GRCh38.mane.1.2.refseq
+	$ snpEff download -v GRCh38.mane.1.2.refseq
 
-$ snpEff -v GRCh38.mane.1.2.refseq {filename}_filtered_snps.vcf > {filename}_filtered_snps.ann.vcf
+	$ snpEff -v GRCh38.mane.1.2.refseq {filename}_filtered_snps.vcf > {filename}_filtered_snps.ann.vcf
 
 * All vcf files generated are located [here](https://github.com/tylerakonom/GTMolecular/blob/main/variants/).
 * Data were visualized using IGV.
